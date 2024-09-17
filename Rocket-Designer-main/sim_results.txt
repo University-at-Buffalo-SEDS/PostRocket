@@ -1,0 +1,16 @@
+Motor Name: TNAM_12_6mm_610mm_7L
+    Propellant: Paraffin
+    Oxidizer Tank Volume: 6783 cc
+    Burn Time: 7.608 s
+    Peak Thrust: 1992.2 N
+    Average Thrust: 1043.6 N
+    Total Impulse: 7941.81 N-s
+    Peak Chamber Pressure: 22.246 bar
+    Average Chamber Pressure: 9.934 bar
+    Port Diameter at Burnout: 6.753 cm
+    Fuel Consumed: 1.897 kg
+    Oxidizer Consumed: 5.124 kg
+    Average OF Ratio: 2.701
+    Characteristic Velocity: 1011.3 m/s
+    Specific Impulse: 115.3 s
+    Motor Classification:  55% M1044
