@@ -30,6 +30,8 @@ class Environment:
 	def fetch_data(self):
 		raise NotImplementedError
 
+
+# Just for testing, probably remove
 def main():
 	print()
 
