@@ -1,6 +1,6 @@
 # defines the environment class, which contains all of the weather data for a given time and place
 
-import time
+import time as tm
 import numpy as np
 import fetch
 
@@ -17,7 +17,7 @@ class Environment:
 
 	!!These variables will probably be ndarrays but these are obviously just placeholders at the moment
 	"""
-	def __init__(self, lat: float, lon: float, time: time.struct_time):
+	def __init__(self, lat: float, lon: float, time: tm.struct_time):
 		self.temperature: np.ndarray = np.zeros(1);
 		self.pressure: np.ndarray = np.zeros(1);
 		self.density: np.ndarray = np.zeros(1);
