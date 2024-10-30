@@ -750,6 +750,12 @@ class rocket:
 
         return cg
 
+    def get_Ixx(self,t):
+
+        self.Ixx = (1/2) * self.total_mass * (self.diameter/2)**2
+
+        return self.Ixx
+    
     def get_Iyy(self,t):
 
          #self.get_mass(t) * (0.75*self.diameter**2 + self.length**2)/12  # Cylindrical approximation

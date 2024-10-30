@@ -9,8 +9,8 @@ from .AtmosphereModel import atmosphere_conditions
 from ..RocketComponents.RocketComponents import *
 from .Drag import *
 
-# Set up 3dof equations to be iterated over in solve_ivp method
-def rocket_3dof(t, y, Rocket:rocket, rail_length):
+# Set up 6dof equations to be iterated over in solve_ivp method
+def rocket_6dof(t, y, Rocket:rocket, rail_length):
     # Equations of motion:
     # Inputs: 
     # t = Time is the specific time of a given timestep
@@ -19,16 +19,18 @@ def rocket_3dof(t, y, Rocket:rocket, rail_length):
     # Weq
     # burn_time - The burntime of the motor
     # The purpose of this function is to plug into an ode solver.
-    Rs = 0.002 #Roughness height
-    vel_x = y[0]
-    vel_z = y[1]
-    pitch_rate = y[2]
-    distance = y[3]
-    altitude = y[4]
-    pitch_angle = y[5]
 
-    velocity = np.sqrt(vel_x**2 + vel_z**2)
-    flight_angle = np.arctan2(vel_x,vel_z)
+    Rs = 0.002 #Roughness height
+    
+    # Velocities in r-axis (body frame)
+    vel_1 = y[0]
+    vel_2 = y[1]
+    vel_3 = y[2]
+    velocity = np.sqrt(vel_1**2 + vel_2**2 + vel_3**2)
+    # Angular velocities in r-axis (body frame)
+    omega_1 = y[3]
+    omega_2 = y[4]
+    omega_3 = y[5]
 
     # Import atmosphere for a given height, velocity, and rocket length:
     atmo = atmosphere_conditions(altitude, velocity, Rocket.length)
@@ -38,7 +40,7 @@ def rocket_3dof(t, y, Rocket:rocket, rail_length):
     density = atmo[3][0]
     mach = atmo[4][0]
     # Aerodynamic Calculations
-    AoA = flight_angle - pitch_angle
+    AoA = np.arccos(vel_1/velocity)
     q = 0.5*density*velocity**2
     Lift, Drag, cp = Rocket.get_aero(t,q,AoA,mach,velocity,density,temperature,Rs)
     
@@ -46,30 +48,31 @@ def rocket_3dof(t, y, Rocket:rocket, rail_length):
     # Thrust Calculations
     Thrust =  Rocket.get_thrust(t, pressure)
     mass = Rocket.get_mass(t)
+    Ixx = Rocket.get_Ixx(t)
     Iyy = Rocket.get_Iyy(t)
+    Izz = Iyy
 
     # Define the equations of motion:
     
     
     if altitude < rail_length*np.cos(pitch_angle):
         
-        acceleration = max((Thrust/mass) - gravity*np.cos(pitch_angle), 0)
-        du_dt = acceleration * np.sin(pitch_angle)
-        dw_dt = acceleration * np.cos(pitch_angle)
-        dq_dt = 0 # change in pitch 
+        dv1_dt = max((Thrust/mass) - gravity*np.cos(pitch_angle), 0)
+        dv2_dt = 0
+        dv3_dt = 0
         
-        dx_dt = vel_x # Change in x 
-        dz_dt = vel_z # Change in z, cannot descend while on rail!
-        do_dt = 0 # change in pitch
+        d1_dt = vel_1 # Change in x 
+        d2_dt = 0 # Change in z, cannot descend while on rail!
+        d3_dt = 0 # change in pitch
     else:
         
-        du_dt = ((Thrust - Drag)*np.sin(pitch_angle) - Lift*np.cos(flight_angle)) / mass # Change in x velocity u
-        dw_dt = ((Thrust - Drag)*np.cos(pitch_angle) + Lift*np.sin(flight_angle)) / mass - gravity# Change in z velocity w
-        dq_dt = Lift*( cp -  Rocket.get_cg(t) ) / Iyy # TODO: Implement Rocket.get_Iyy!!!!
+        dv1_dt = (Thrust - Drag)/mass - gravity[0]    # Change in x velocity u
+        dv2_dt = ((Thrust - Drag)*np.cos(pitch_angle) + Lift*np.sin(flight_angle)) / mass - gravity# Change in z velocity w
+        #dv3_dt = 
 
-        dx_dt = vel_x
-        dz_dt = vel_z
-        do_dt = pitch_rate
+        d1_dt = vel_1
+        d2_dt = vel_2
+        d3_dt = vel_3
 
 
     dydt = [du_dt, dw_dt, dq_dt, dx_dt, dz_dt, do_dt]
@@ -79,10 +82,10 @@ def rocket_3dof(t, y, Rocket:rocket, rail_length):
 
 ###############################################################################################################################
 ###############################################################################################################################
+
+
 def Trajectory(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol, atol, vectorized:bool):
     '''Rocket class, lrail langth [m], Rail angle from vertical [deg], Integration method, Integration rel. tolerance, Integration abs. tolerance, Integration vectorized? [bool]'''
-###############################################################################################################################
-
 
     # Solve the IVP
     # Initial values
