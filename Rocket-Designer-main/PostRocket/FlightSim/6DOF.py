@@ -13,28 +13,40 @@ from .Drag import *
 def rocket_6dof(t, y, Rocket:rocket, rail_length):
     # Equations of motion:
     # Inputs: 
-    # t = Time is the specific time of a given timestep
-    # y - A vector containing x velocity[0], z velocity[1], pitch rate[2], x position[3] z position[4] and pitch angle[5] relative to starting
-    # m_dot - The massflowrate 
-    # Weq
-    # burn_time - The burntime of the motor
+    # t - Time is the specific time of a given timestep
+    # y - A vector containing the state space variables
     # The purpose of this function is to plug into an ode solver.
 
     Rs = 0.002 #Roughness height
     
-    # Velocities in r-axis (body frame)
-    vel_1 = y[0]
-    vel_2 = y[1]
-    vel_3 = y[2]
+    # Velocities in r-axes (body frame)
+    pos_1 = y[0]
+    pos_2 = y[1]
+    pos_3 = y[2]
+
+    vel_1 = y[3]
+    vel_2 = y[4]
+    vel_3 = y[5]
     velocity = np.sqrt(vel_1**2 + vel_2**2 + vel_3**2)
-    # Angular velocities in r-axis (body frame)
-    omega_1 = y[3]
-    omega_2 = y[4]
-    omega_3 = y[5]
+    
+    # Angular velocities about r-axes (body frame)
+    psi   = y[6]
+    theta = y[7]
+    phi   = y[8]
+
+    omega_1 = y[9]
+    omega_2 = y[10]
+    omega_3 = y[11]
+
+    BN = np.array([],[],[])
+    NB = np.transpose(BN)
+
+
+
 
     # Import atmosphere for a given height, velocity, and rocket length:
     atmo = atmosphere_conditions(altitude, velocity, Rocket.length)
-    gravity = atmo[0][0]
+    gravity = np.array[-atmo[0][0],0,0]
     temperature = atmo[1][0]
     pressure = atmo[2][0]
     density = atmo[3][0]
@@ -56,26 +68,42 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
     
     
     if altitude < rail_length*np.cos(pitch_angle):
-        
-        dv1_dt = max((Thrust/mass) - gravity*np.cos(pitch_angle), 0)
-        dv2_dt = 0
-        dv3_dt = 0
-        
-        d1_dt = vel_1 # Change in x 
-        d2_dt = 0 # Change in z, cannot descend while on rail!
-        d3_dt = 0 # change in pitch
-    else:
-        
-        dv1_dt = (Thrust - Drag)/mass - gravity[0]    # Change in x velocity u
-        dv2_dt = ((Thrust - Drag)*np.cos(pitch_angle) + Lift*np.sin(flight_angle)) / mass - gravity# Change in z velocity w
-        #dv3_dt = 
-
+        # Translation EOM's
         d1_dt = vel_1
         d2_dt = vel_2
         d3_dt = vel_3
+        
+        dv1_dt = max(((Thrust - Drag)/mass) + gravity[0])
+        dv2_dt = 0
+        dv3_dt = 0
+        # Rotation EOM's
+        dr1_dt = omega_1
+        dr2_dt = omega_2
+        dr3_dt = omega_3
 
+        dw1_dt = 0
+        dw2_dt = 0
+        dw3_dt = 0
 
-    dydt = [du_dt, dw_dt, dq_dt, dx_dt, dz_dt, do_dt]
+    else:
+        # Translation EOM's
+        d1_dt = vel_1
+        d2_dt = vel_2
+        d3_dt = vel_3
+        
+        dv1_dt = max(((Thrust - Drag)/mass) + gravity[0])
+        dv2_dt = 0
+        dv3_dt = 0
+        # Rotation EOM's
+        dr1_dt = omega_1
+        dr2_dt = omega_2
+        dr3_dt = omega_3
+
+        dw1_dt = 0
+        dw2_dt = 0
+        dw3_dt = 0
+        
+    dydt = [d1_dt, d2_dt, d3_dt, dv1_dt, dv2_dt, dv3_dt, dr1_dt, dr2_dt, dr3_dt, dw1_dt, dw2_dt, dw3_dt]
     
     return dydt
 
@@ -107,7 +135,7 @@ def Trajectory(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol,
         return y[1] > -0.1
     apogee.terminal = True
     cd = []
-    rocketflight = solve_ivp(lambda t, y:rocket_3dof(t, y, Rocket, rail_length), t_span, y_init,str(input_method),vectorized=vectorized, rtol = rtol, atol = atol, first_step = first_step, events=(rail_departure, apogee))
+    rocketflight = solve_ivp(lambda t, y:rocket_6dof(t, y, Rocket, rail_length), t_span, y_init,str(input_method),vectorized=vectorized, rtol = rtol, atol = atol, first_step = first_step, events=(rail_departure, apogee))
 
     
     rail_time = rocketflight.t_events[0][-1]
