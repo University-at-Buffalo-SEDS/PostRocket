@@ -20,9 +20,9 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
     Rs = 0.002 #Roughness height
     
     # Velocities in r-axes (body frame)
-    pos_1 = y[0]
-    pos_2 = y[1]
-    pos_3 = y[2]
+    pos_x = y[0]
+    pos_y = y[1]
+    pos_z = y[2]
 
     vel_1 = y[3]
     vel_2 = y[4]
@@ -38,24 +38,27 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
     omega_2 = y[10]
     omega_3 = y[11]
 
-    BN = np.array([],[],[])
+    BN = np.array([[np.cos(theta)*np.cos(psi),np.cos(theta)*np.sin(psi),-np.sin(theta)],
+                   [np.sin(phi)*np.sin(theta)*np.cos(psi)-np.cos(phi)*np.sin(psi),np.sin(phi)*np.sin(theta)*np.sin(psi)+np.cos(phi)*np.cos(psi),np.sin(phi)*np.cos(theta)],
+                   [np.cos(phi)*np.sin(theta)*np.cos(psi)+np.sin(phi)*np.sin(psi),np.cos(phi)*np.sin(theta)*np.sin(psi)-np.sin(phi)*np.cos(psi),np.cos(phi)*np.cos(theta)]])
     NB = np.transpose(BN)
-
-
-
 
     # Import atmosphere for a given height, velocity, and rocket length:
     atmo = atmosphere_conditions(altitude, velocity, Rocket.length)
-    gravity = np.array[-atmo[0][0],0,0]
+    gravity = np.array([-atmo[0][0],0,0])
+    gravity = BN @ gravity
     temperature = atmo[1][0]
     pressure = atmo[2][0]
     density = atmo[3][0]
     mach = atmo[4][0]
+
     # Aerodynamic Calculations
     AoA = np.arccos(vel_1/velocity)
     q = 0.5*density*velocity**2
     Lift, Drag, cp = Rocket.get_aero(t,q,AoA,mach,velocity,density,temperature,Rs)
-    
+    uL = np.array([0,-vel_2,-vel_3])
+    uL = 1/(vel_2**2 + vel_3**2)**(1/2) * uL
+    Lift = Lift * uL
     
     # Thrust Calculations
     Thrust =  Rocket.get_thrust(t, pressure)
@@ -66,20 +69,21 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
 
     # Define the equations of motion:
     
-    
-    if altitude < rail_length*np.cos(pitch_angle):
+    if  pos_x < rail_length:   # Remember to replace with actual stuff idk
         # Translation EOM's
-        d1_dt = vel_1
-        d2_dt = vel_2
-        d3_dt = vel_3
+        vel_xyz = NB @ np.array([vel_1,vel_2,vel_3])
+
+        dx_dt = vel_xyz[0]
+        dy_dt = vel_xyz[1]
+        dz_dt = vel_xyz[2]
         
         dv1_dt = max(((Thrust - Drag)/mass) + gravity[0])
         dv2_dt = 0
         dv3_dt = 0
         # Rotation EOM's
-        dr1_dt = omega_1
-        dr2_dt = omega_2
-        dr3_dt = omega_3
+        dr1_dt = 0
+        dr2_dt = 0
+        dr3_dt = 0
 
         dw1_dt = 0
         dw2_dt = 0
@@ -87,23 +91,25 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
 
     else:
         # Translation EOM's
-        d1_dt = vel_1
-        d2_dt = vel_2
-        d3_dt = vel_3
+        vel_xyz = NB @ np.array([vel_1,vel_2,vel_3])
+
+        dx_dt = vel_xyz[0]
+        dy_dt = vel_xyz[1]
+        dz_dt = vel_xyz[2]
         
-        dv1_dt = max(((Thrust - Drag)/mass) + gravity[0])
-        dv2_dt = 0
-        dv3_dt = 0
+        dv1_dt = ((Thrust - Drag)/mass) + gravity[0]
+        dv2_dt = Lift[1]/mass + gravity[1]
+        dv3_dt = Lift[2]/mass + gravity[2]
         # Rotation EOM's
-        dr1_dt = omega_1
-        dr2_dt = omega_2
-        dr3_dt = omega_3
+        dr1_dt = (np.sin(phi)*omega_2 + np.cos(phi)*omega_3)/np.cos(theta)
+        dr2_dt = (np.cos(phi)*np.cos(theta)*omega_2 - np.sin(phi)*np.cos(theta)*omega_3)/np.cos(theta)
+        dr3_dt = (np.cos(theta)*omega_1 + np.sin(phi)*np.sin(theta)*omega_2 + np.cos(phi)*np.sin(theta)*omega_3)/np.cos(theta)
 
         dw1_dt = 0
-        dw2_dt = 0
-        dw3_dt = 0
+        dw2_dt = Lift[1]*(cp -  Rocket.get_cg(t)) / Iyy
+        dw3_dt = Lift[2]*(cp -  Rocket.get_cg(t)) / Iyy
         
-    dydt = [d1_dt, d2_dt, d3_dt, dv1_dt, dv2_dt, dv3_dt, dr1_dt, dr2_dt, dr3_dt, dw1_dt, dw2_dt, dw3_dt]
+    dydt = [dx_dt, dy_dt, dz_dt, dv1_dt, dv2_dt, dv3_dt, dr1_dt, dr2_dt, dr3_dt, dw1_dt, dw2_dt, dw3_dt]
     
     return dydt
 
@@ -117,10 +123,11 @@ def Trajectory(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol,
 
     # Solve the IVP
     # Initial values
-    launch_angle = launch_angle*np.pi/180 # launch rail angle to degrees
+    launch_angle = launch_angle*np.pi/180 # converts launch rail angle from degrees to radians
     sla = np.sin(launch_angle)
     cla = np.cos(launch_angle)
-    y_init = [sla*1e-6, cla*1e-6, 0.0, 0.0, 0.0, launch_angle] #Initial conditions
+    # 3dof initial conditions:  y_init = [sla*1e-6, cla*1e-6, 0.0, 0.0, 0.0, launch_angle] 
+    y_init = [0,0,0, 0,0,0, 0,launch_angle,0, 0,0,0] # 6dof Initial conditions
 
     # Define the ivp
     t_span = [0, 100] # Arbitrary t_span longer than any anticipated flight
@@ -129,10 +136,10 @@ def Trajectory(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol,
     # Define flight events: apogee, rail velocity
     
     def rail_departure(t,y):
-        return (y[4] > rail_length)
+        return (y[2] > rail_length)
     
     def apogee(t,y):
-        return y[1] > -0.1
+        return np.abs(y[7]) < 1e-3
     apogee.terminal = True
     cd = []
     rocketflight = solve_ivp(lambda t, y:rocket_6dof(t, y, Rocket, rail_length), t_span, y_init,str(input_method),vectorized=vectorized, rtol = rtol, atol = atol, first_step = first_step, events=(rail_departure, apogee))
@@ -144,18 +151,24 @@ def Trajectory(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol,
     apogee_data = rocketflight.y_events[1][-1]
 
     trajectory_output = {'time'         : rocketflight.t,
-                         'vel_x'        : rocketflight.y[0],
-                         'vel_z'        : rocketflight.y[1],
-                         'pitch_rate'   : rocketflight.y[2],
-                         'distance'     : rocketflight.y[3],
-                         'altitude'     : rocketflight.y[4],
-                         'pitch'        : rocketflight.y[5],
+                         'x_position'   : rocketflight.y[0],
+                         'y_position'   : rocketflight.y[1],
+                         'z_position'   : rocketflight.y[2],
+                         'r1_velocity'  : rocketflight.y[3],
+                         'r2_velocity'  : rocketflight.y[4],
+                         'r3_velocity'  : rocketflight.y[5],
+                         'yaw'          : rocketflight.y[6],
+                         'pitch'        : rocketflight.y[7],
+                         'roll'         : rocketflight.y[8],
+                         'omega_1'      : rocketflight.y[9],
+                         'omega_2'      : rocketflight.y[10],
+                         'omega_3'      : rocketflight.y[11],
                          'off_rail_time': rail_time,
                          'off_rail_vel' : np.linalg.norm(rail_data[[0,1]]),
                          'apogee_time'  : apogee_time,
                          'apogee_state' : apogee_data,
-                         'apogee'       : apogee_data[4],
-                         'AoA'          : np.arctan2(rocketflight.y[0],rocketflight.y[1]) - rocketflight.y[5]}
+                         'apogee'       : apogee_data[4],}
+                         #'AoA'          : }
 
     return trajectory_output
 
