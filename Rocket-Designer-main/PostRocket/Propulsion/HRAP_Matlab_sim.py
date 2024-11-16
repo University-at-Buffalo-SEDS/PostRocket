@@ -9,7 +9,7 @@ def TNAM(grain_diameter, port_diameter , grain_length, oxidizer_volume):
        print('Starting Matlab engine...')
        matlab_engine = matlab.engine.start_matlab()
        print('Adding HRAP subfolders to the Matlab Path...')
-       matlab_engine.addpath(matlab_engine.genpath(os.getcwd() + '\\HRAP - Matlab')) # Adds the entire HRAP - Matlab folder to the matlab path so it can be used
+       matlab_engine.addpath(matlab_engine.genpath(os.getcwd() + '\\Rocket-Designer-main\\HRAP - Matlab')) # Adds the entire HRAP - Matlab folder to the matlab path so it can be used
        print('Matlab engine ready')
 
     # TODO: Validate or adjust most values

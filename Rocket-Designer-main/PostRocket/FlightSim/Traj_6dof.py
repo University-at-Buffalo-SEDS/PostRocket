@@ -44,7 +44,7 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
     NB = np.transpose(BN)
 
     # Import atmosphere for a given height, velocity, and rocket length:
-    atmo = atmosphere_conditions(altitude, velocity, Rocket.length)
+    atmo = atmosphere_conditions(pos_z, velocity, Rocket.length)
     gravity = np.array([-atmo[0][0],0,0])
     gravity = BN @ gravity
     temperature = atmo[1][0]
@@ -69,7 +69,7 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
 
     # Define the equations of motion:
     
-    if  pos_x < rail_length:   # Remember to replace with actual stuff idk
+    if  np.sqrt(pos_x^2 + pos_z^2) < rail_length:   # Remember to replace with actual stuff idk
         # Translation EOM's
         vel_xyz = NB @ np.array([vel_1,vel_2,vel_3])
 
@@ -118,14 +118,14 @@ def rocket_6dof(t, y, Rocket:rocket, rail_length):
 ###############################################################################################################################
 
 
-def Trajectory(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol, atol, vectorized:bool):
+def Traj_6dof(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol, atol, vectorized:bool):
     '''Rocket class, lrail langth [m], Rail angle from vertical [deg], Integration method, Integration rel. tolerance, Integration abs. tolerance, Integration vectorized? [bool]'''
 
     # Solve the IVP
     # Initial values
     launch_angle = launch_angle*np.pi/180 # converts launch rail angle from degrees to radians
-    sla = np.sin(launch_angle)
-    cla = np.cos(launch_angle)
+    #sla = np.sin(launch_angle)
+    #cla = np.cos(launch_angle)
     # 3dof initial conditions:  y_init = [sla*1e-6, cla*1e-6, 0.0, 0.0, 0.0, launch_angle] 
     y_init = [0,0,0, 0,0,0, 0,launch_angle,0, 0,0,0] # 6dof Initial conditions
 
@@ -139,7 +139,7 @@ def Trajectory(Rocket:rocket, rail_length, launch_angle, input_method:str, rtol,
         return (y[2] > rail_length)
     
     def apogee(t,y):
-        return np.abs(y[7]) < 1e-3
+        return np.abs(y[7]) < 1e-2
     apogee.terminal = True
     cd = []
     rocketflight = solve_ivp(lambda t, y:rocket_6dof(t, y, Rocket, rail_length), t_span, y_init,str(input_method),vectorized=vectorized, rtol = rtol, atol = atol, first_step = first_step, events=(rail_departure, apogee))

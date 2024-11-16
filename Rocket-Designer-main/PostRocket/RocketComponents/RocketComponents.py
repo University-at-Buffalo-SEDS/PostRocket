@@ -1,4 +1,4 @@
-# Authors: Alex Post, Jasper Stedma 7/15/2024
+# Authors: Alex Post, Jasper Stedman 7/15/2024
 # The purpose of this file is to set up classes where a user can input a rocket design.
 
 #######################################################################################################################
@@ -752,7 +752,7 @@ class rocket:
 
     def get_Ixx(self,t):
 
-        self.Ixx = (1/2) * self.total_mass * (self.diameter/2)**2
+        self.Ixx = (1/2) * self.mass * (self.diameter/2)**2
 
         return self.Ixx
     
