@@ -7,7 +7,6 @@ import fetch
 # Constants
 # idk what constants we need but they'll go here
 
-
 class Environment:
 	
 	"""
@@ -20,24 +19,23 @@ class Environment:
 	def __init__(self, lat: float, lon: float) -> None:
 		self.lat = lat
 		self.lon = lon
-
-		self.temperature: np.ndarray = np.zeros(1);
-		self.pressure: np.ndarray = np.zeros(1);
-		self.density: np.ndarray = np.zeros(1);
-		self.windSpeed: np.ndarray = np.zeros(1);
-		self.windDirection: np.ndarray = np.zeros(1);
-		self.gravity: np.ndarray = np.zeros(1);
+		self.atmosphere: dict[str, np.ndarray]
 
 	def calculate_gravity(self):
 		raise NotImplementedError
 	
-	def fetch_openMeteoData(self):
-		temp = fetch.fetch_data(self.lat, self.lon, "current")
+	# properties should be from list ["temp", "humidity", "windSpeed", "windDirection"].
+	# Days is number of days in the futureforecast
+	def fetch_openMeteoData(self, properties: list[str], days: int) -> dict[str, np.ndarray]:
+		self.atmosphere = fetch.fetch_data(self.lat, self.lon, properties, days)
+		return self.atmosphere
 
 
 # Just for testing, probably remove
 def main():
-	print()
+	env = Environment(32.938358, -106.912406)
+	env.fetch_openMeteoData(["temp", "humidity", "windSpeed", "windDirection"], 1)
+	print(env.atmosphere["windSpeed"][23,:])
 
 if __name__ == "__main__":
 	main()
