@@ -2,7 +2,7 @@
 Fetches data from APIs
 Currently (and probably permanently) only uses OpenMeteo API
 """
-
+import environment
 from datetime import datetime
 import openmeteo_requests
 import requests_cache
@@ -12,6 +12,8 @@ import numpy as np
 import requests
 import time as tm
 from openmeteo_sdk.WeatherApiResponse import WeatherApiResponse, VariablesWithTime
+
+validProperties: list[str] = ["temp", "humidity", "windSpeed", "windDirection"]
 
 propertiesMap: dict[str, list[str]] = {
     "temp": [
@@ -73,11 +75,25 @@ propertiesMap: dict[str, list[str]] = {
 }
 
 
+def validateProperties(properties: list[str]) -> None:
+    for property in properties:
+        if property not in validProperties:
+            raise Exception(
+                f"{property} is not a valid property\nValid properties are {validProperties}"
+            )
+
 # Calls the open-meteo api and returns a dictionary of each of the requested properties
 def fetch_data(
     lat: float, lon: float, properties: list[str], days: int
 ) -> dict[str, np.ndarray]:
-    
+
+    if days not in [1, 3, 7, 14, 16]:
+        raise Exception(
+            f"{days} is not a valid forecast range\nDays must be 1, 3, 7, 14, or 16"
+        )
+
+    validateProperties(properties)
+
     cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
     openmeteo = openmeteo_requests.Client(session=retry_session)
@@ -103,18 +119,21 @@ def fetch_data(
     hourly: VariablesWithTime = response.Hourly()
     # print(hourly.Variables(0).ValuesAsNumpy())
 
-    heightSteps = 12
+    numHeightSteps = len(environment.heightSteps)
     hours = days * 24
 
     out: dict[str, np.ndarray] = {}
     for property in properties:
-        out[property] = np.zeros((hours, heightSteps)) # Each property in the output will be (hours x heightSteps) size
+        out[property] = np.zeros(
+            (hours, numHeightSteps)
+        )  # Each property in the output will be (hours x heightSteps) size
 
-
-    for i in range(len(properties)): # for each property
-        var = np.zeros((hours, heightSteps)) # for each height step of that property
-        for j in range(heightSteps * i, heightSteps * (i + 1)):
-            var[:, j % heightSteps] = hourly.Variables(j).ValuesAsNumpy()
+    for i in range(len(properties)):  # for each property
+        var = np.zeros((hours, numHeightSteps))
+        for j in range(
+            numHeightSteps * i, numHeightSteps * (i + 1)
+        ):  # for each height step of that property
+            var[:, j % numHeightSteps] = hourly.Variables(j).ValuesAsNumpy()
         out[properties[i]] = var
 
     return out
