@@ -2,19 +2,19 @@
 Fetches data from APIs
 Currently (and probably permanently) only uses OpenMeteo API
 """
+
 import environment
-from datetime import datetime
 import openmeteo_requests
 import requests_cache
-import pandas as pd
 from retry_requests import retry
 import numpy as np
-import requests
-import time as tm
 from openmeteo_sdk.WeatherApiResponse import WeatherApiResponse, VariablesWithTime
 
+# Used to determine a valid or invalid call to the fetchData method. Also used from environment.py
 validProperties: list[str] = ["temp", "humidity", "windSpeed", "windDirection"]
+validDays: list[int] = [1, 3, 7, 14, 16]
 
+# Used in construction of the API call
 propertiesMap: dict[str, list[str]] = {
     "temp": [
         "temperature_1000hPa",  # 110 m
@@ -76,28 +76,38 @@ propertiesMap: dict[str, list[str]] = {
 
 
 def validateProperties(properties: list[str]) -> None:
-    for property in properties:
-        if property not in validProperties:
-            raise Exception(
-                f"{property} is not a valid property\nValid properties are {validProperties}"
-            )
+    """Determines is given properties are valid, throw exception if not. This isn't very good practice"""
+    validSet = set(validProperties)
+    actualSet = set(properties)
+    if not actualSet.issubset(validSet):
+        raise Exception(
+            f"{list(actualSet - validSet)} are not valid properties\nValid properties are {validProperties}"
+        )
+
+
+def validateDays(days: int) -> None:
+    """Determines if given number if days is valid, throws exception if not. This isn't very good practice"""
+    if days not in validDays:
+        raise Exception(
+            f"{days} is not a valid forecast range\nDays must be 1, 3, 7, 14, or 16"
+        )
+
 
 # Calls the open-meteo api and returns a dictionary of each of the requested properties
 def fetch_data(
     lat: float, lon: float, properties: list[str], days: int
 ) -> dict[str, np.ndarray]:
+    """Fetch data from openMeteo API"""
 
-    if days not in [1, 3, 7, 14, 16]:
-        raise Exception(
-            f"{days} is not a valid forecast range\nDays must be 1, 3, 7, 14, or 16"
-        )
-
+    # This isn't very good practice and should probably be changed
+    validateDays(days)
     validateProperties(properties)
 
     cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
     openmeteo = openmeteo_requests.Client(session=retry_session)
 
+    # Construct the properties that are desired in the necessary format for the API call
     callProperties = [propertiesMap[prop] for prop in properties]
 
     url = "https://api.open-meteo.com/v1/forecast"
@@ -113,11 +123,8 @@ def fetch_data(
     }
 
     response: WeatherApiResponse = openmeteo.weather_api(url, params=params)[0]
-    # print(f"Coordinates {response.Latitude()}°N {response.Longitude()}°E")
-    # print(f"Elevation {response.Elevation()} m asl")
 
     hourly: VariablesWithTime = response.Hourly()
-    # print(hourly.Variables(0).ValuesAsNumpy())
 
     numHeightSteps = len(environment.heightSteps)
     hours = days * 24
