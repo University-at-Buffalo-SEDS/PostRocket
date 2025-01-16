@@ -23,7 +23,12 @@ heightSteps: list[int] = [
     9600,
 ]
 
-# idk what constants we need but they'll go here
+coordinates: dict[str, tuple[float, float]] = {
+    "Spaceport America": (32.938358, -106.912406),
+    "Utah1": (37.931728, -113.053677),
+    "Utah2": (37.945524, -113.033278),
+    "Texas": (31.049802, -103.547313),
+}
 
 
 class Environment:
@@ -65,7 +70,9 @@ class Environment:
             raise Exception("Call the API before accessing environment data")
         fetch.validateProperties([property])
         if property not in self.atmosphere.keys():
-            raise Exception(f"{property} is valid, but was not given as a property to be retrieved from the API")
+            raise Exception(
+                f"{property} is valid, but was not given as a property to be retrieved from the API"
+            )
         if not 0 <= height <= heightSteps[-1]:
             raise Exception(f"Height of {height} out of bounds")
         if not 0 <= hour < self.atmosphere[property].shape[0]:
@@ -90,18 +97,11 @@ class Environment:
         ) * ((height - low) / (high - low)) + self.atmosphere[property][hour, lowIdx]
 
 
-# Just for testing, probably remove
+# Mostly for testing, but it does show the proper use of some of the functions so I guess I'll leave it
 def main():
-    # env = Environment(32.938358, -106.912406)
-    # env.fetch_openMeteoData(["t", "temp", "pawfw", "pressure", "humidity"], 1)
-    # print(env.atmosphere["windSpeed"][23,:])
-    # plt.plot(list(range(1, 13)), heightSteps)
-    # plt.plot(np.arange(1,13), 60 * np.arange(1,13)**2.2)
-    # plt.show()
-    # print(np.array([1,2,3])**2)
-    # env = Environment(32.938358, -106.912406)
-    # env.atmosphere["temp"] = np.array([[x*100 for x in range(1,13)]])
-    # print(env.getAtHeight("temp", 9600, 1))
+    env = Environment(*coordinates["Texas"])
+    env.fetch_openMeteoData(fetch.validProperties, days=1)
+    print(env.getAtHeight("temp", 750, 1))
 
 
 if __name__ == "__main__":
