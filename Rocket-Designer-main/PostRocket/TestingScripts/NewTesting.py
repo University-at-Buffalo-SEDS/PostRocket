@@ -110,7 +110,7 @@ TNAM_Test = rocket(nosecone,upper_body,middle_body,ox_tank,lower_body,fins,boatt
 TNAM_Test.update_components(0.01335, 0.6, 0.007)
 
 rail_length = 10
-launch_angle = 4
+launch_angle = 86
 requested_apogee = 3352.8 #m, 11000 ft
 requested_off_rail = 30.48 # m/s, 100 ft/s
 stability = 1.5
@@ -120,79 +120,16 @@ stability = 1.5
 # Test inputs
 traj = Traj_6dof(TNAM_Test, rail_length, launch_angle, 'LSODA', 1e-4, 1e-4, False)
 
-
 plt.close()
 fig, ax = plt.subplots(2,1)
 TNAM_Test.draw(ax[0])
 ax[1].plot(motor.burn_time,motor.thrust_curve,label='Thrust')
 ax[1].plot(traj['time'],traj['z_position'],label='Altitude')
 ax[1].grid(True,'major',alpha=0.5)
-ax[1].xaxis.set_minor_locator(AutoMinorLocator())
-ax[1].yaxis.set_minor_locator(AutoMinorLocator())
-ax[1].grid(True,'minor', alpha= 0.25)
+#ax[1].xaxis.set_minor_locator(AutoMinorLocator())
+#ax[1].yaxis.set_minor_locator(AutoMinorLocator())
+#ax[1].grid(True,'minor', alpha= 0.25)
 ax[1].legend()
 ax[1].set_xlabel('time [s]')
 ax[1].set_ylabel('Thrust [N], Altitude [m]')
 plt.show()
-'''
-TNAM_Test.save("TNAM_v0",None,traj)
-optimizer_run_number = 0
-
-def objective_function(decision_variable, requested_apogee, requested_off_rail, Rocket):
-    global optimizer_run_number
-    optimizer_run_number += 1
-    print(f' Trajectory Runs: {optimizer_run_number}',end='\r')
-
-    port_diameter = decision_variable[0]
-    grain_length = decision_variable[1]
-    ox_volume = decision_variable[2]
-
-    Rocket.update_components(port_diameter,grain_length,ox_volume)
-
-    # apogee, amax, rocket_alt, rocket_vel, rocket_time, rocket_dist, traj_angle, rocket_accel, rail_departure_time, rail_departure_velocity = Trajectory(Rocket, rail_length, launch_angle, 'LSODA', 1e-4, 1e-4, False)
-    traj = Trajectory(Rocket, rail_length, launch_angle, 'LSODA', 1e-8, 1e-8, False)
-    apogee_error = (traj['apogee'] - requested_apogee) 
-    rail_error = (traj['off_rail_vel'] - requested_off_rail)
-    apogee_weight = 10
-    rail_weight = (rail_error < 0) * 100
-    output = (apogee_weight * apogee_error**2) + (rail_weight * rail_error**2)
-
-    return output
-'''
-'''
-print('Beginning Optimization...')
-initial_guess = [0.01335, 0.6, 0.007]
-bounds = [(0.001, grain_D*0.9),(0.1,1),(0.001,0.5)]
-result = opt.minimize(objective_function,
-        initial_guess,
-        args=(requested_apogee, requested_off_rail, TNAM_Test),
-        method='COBYLA',
-        bounds=bounds,
-        options={'maxiter': 500,'disp': True,'rhobeg':[0.01,0.01,0.01], 'tol' : 1e-6}) # Nelder-Mead Options: {'maxiter': 500,'disp': True, 'xatol': 1e-10, 'return_all':True}
-Solution = result.x
-
-TNAM_Test.update_components(*result.x)
-traj2 = Trajectory(TNAM_Test, rail_length, launch_angle, 'LSODA', 1e-4, 1e-4, False)
-print('')
-print(f"Initial_Guess: {traj['apogee']} m, {traj['off_rail_vel']} m/s")
-print(f"After Optimization: {traj2['apogee']}/{requested_apogee} m, {traj2['off_rail_vel']}/{requested_off_rail} m/s")
-print(f"Solution: {Solution}")
-print('done!')
-Beep(1000,500)
-Beep(900,500)
-if result.success:
-    Beep(1000,500)
-    Beep(900,500)
-    Beep(1000,1000)
-else:
-    Beep(850,2000)
-'''
-'''
-plt.close()
-fig, ax = plt.subplots(2,1)
-TNAM_Test.draw(ax[0])
-ax[1].plot(motor.burn_time,motor.thrust_curve)
-ax[1].plot(traj['time'],traj['altitude'])
-plt.show()
-print('Done')   
-'''
