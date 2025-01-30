@@ -2,3 +2,20 @@ Approximate coordinates of the launch site in Spaceport America
 
 lat: 32.938358
 lon: -106.912406
+
+--------------------------------------------------------------------------------------
+Approximate coordinates of the launch site in Utah
+
+Site 1
+lat: 37.931727515089776
+lon: -113.05367677116384
+
+Site 2
+lat: 37.945524176166565
+lon: -113.03327840489519
+
+--------------------------------------------------------------------------------------
+Approximate coordinates of the launch site in Texas
+
+lat: 31.04980169999999
+lon: -103.5473133
