@@ -43,7 +43,7 @@ class Environment:
         self.lon = lon
         self.atmosphere: dict[str, np.ndarray] = {}
 
-    def fetch_openMeteoData(
+    def fetchOpenMeteoData(
         self, properties: list[str], days: int
     ) -> dict[str, np.ndarray]:
         """
@@ -100,7 +100,7 @@ class Environment:
 # Mostly for testing, but it does show the proper use of some of the functions so I guess I'll leave it
 def main():
     env = Environment(*coordinates["Texas"])
-    env.fetch_openMeteoData(fetch.validProperties, days=1)
+    env.fetchOpenMeteoData(fetch.validProperties, days=1)
     print(env.getAtHeight("temp", 750, 1))
 
 
