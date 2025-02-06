@@ -5,6 +5,7 @@ from sys import exception
 import time as tm
 from matplotlib import pyplot as plt
 import numpy as np
+import scipy.interpolate
 import fetch
 
 # Constants
@@ -54,12 +55,6 @@ class Environment:
         self.atmosphere = fetch.fetch_data(self.lat, self.lon, properties, days)
         return self.atmosphere
 
-    def getIndices(self, height) -> tuple[int, int]:
-        """Get the indices of the height steps below and above the given height"""
-        for i in range(len(heightSteps)):
-            if heightSteps[i] > height:
-                return i - 1, i
-
     def getAtHeight(self, property: str, height: int, hour: int):
         """
         Return a given property from the atmosphere attribute given a specific height and time
@@ -80,28 +75,15 @@ class Environment:
                 f"Hour {hour} is out of bounds\nMax hour for this API call is {self.atmosphere[property].shape[0]}"
             )
 
-        if height < heightSteps[0]:
-            return self.atmosphere[property][hour, 0]
-
-        if height in heightSteps:
-            return self.atmosphere[property][hour, heightSteps.index(height)]
-
-        lowIdx, highIdx = self.getIndices(height)
-        low = heightSteps[lowIdx]
-        high = heightSteps[highIdx]
-
-        # use those indices to calculate linear approximation between the heights at those indices
-        return (
-            self.atmosphere[property][hour, highIdx]
-            - self.atmosphere[property][hour, lowIdx]
-        ) * ((height - low) / (high - low)) + self.atmosphere[property][hour, lowIdx]
+        return np.interp(height, heightSteps, self.atmosphere[property][hour])
 
 
 # Mostly for testing, but it does show the proper use of some of the functions so I guess I'll leave it
 def main():
     env = Environment(*coordinates["Texas"])
     env.fetchOpenMeteoData(fetch.validProperties, days=1)
-    print(env.getAtHeight("temp", 750, 1))
+    for height in range(0, 1000, 100):
+        print(env.getAtHeight("windSpeed", height, 1))
 
 
 if __name__ == "__main__":
