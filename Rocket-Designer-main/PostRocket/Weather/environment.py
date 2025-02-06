@@ -1,7 +1,5 @@
 # defines the environment class, which contains all of the weather data for a given time and place
 
-from logging import warning
-from sys import exception
 import time as tm
 from matplotlib import pyplot as plt
 import numpy as np
